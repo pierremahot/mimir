@@ -41,6 +41,7 @@ type RemoteReadCommand struct {
 
 	tenantID string
 	apiKey   string
+	apiUser  string
 
 	readTimeout time.Duration
 	tsdbPath    string
@@ -69,7 +70,12 @@ func (c *RemoteReadCommand) Register(app *kingpin.Application, envVars EnvVarNam
 			Envar(envVars.TenantID).
 			Default("").
 			StringVar(&c.tenantID)
-		cmd.Flag("key", "API key to use when contacting Grafana Mimir; alternatively, set "+envVars.APIKey+".").
+		cmd.Flag("user",
+			fmt.Sprintf("Basic auth username to use when contacting Grafana Mimir; alternatively, set %s. If empty, %s is used instead.", envVars.APIUser, envVars.TenantID)).
+			Default("").
+			Envar(envVars.APIUser).
+			StringVar(&c.apiUser)
+		cmd.Flag("key", "Basic auth password to use when contacting Grafana Mimir; alternatively, set "+envVars.APIKey+".").
 			Envar(envVars.APIKey).
 			Default("").
 			StringVar(&c.apiKey)
@@ -201,7 +207,7 @@ func (c *RemoteReadCommand) readClient() (remote.ReadClient, error) {
 		Timeout: model.Duration(c.readTimeout),
 		HTTPClientConfig: config_util.HTTPClientConfig{
 			BasicAuth: &config_util.BasicAuth{
-				Username: c.tenantID,
+				Username: c.apiUser,
 				Password: config_util.Secret(c.apiKey),
 			},
 		},
